@@ -280,10 +280,9 @@ def score_signal(df5: pd.DataFrame, df15: pd.DataFrame, df1h: pd.DataFrame,
 
     # ── 2. LIQUIDITY SWEEP — stop hunt before real move (1 pt) ───────────────
     sweep = detect_liquidity_sweep(df5)
-    if sweep:
-        # Filter contradicting signals: if breakout and sweep disagree, discard sweep
-        if bo is not None and bo["direction"] != sweep["direction"]:
-            sweep = None
+    # Filter contradicting signals: if breakout and sweep disagree, discard sweep
+    if sweep and bo is not None and bo["direction"] != sweep["direction"]:
+        sweep = None
     if sweep:
         if sweep["direction"] == "BULLISH":
             long_score  += 1
