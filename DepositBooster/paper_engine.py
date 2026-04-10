@@ -158,12 +158,12 @@ class PaperEngine:
         if len(self.positions) >= cfg.MAX_POSITIONS:
             return False
 
-        # Position sizing: risk RISK_PCT of equity
-        risk_usdt = self.equity * cfg.RISK_PCT
+        # Position sizing: risk RISK_PCT of balance (not equity, to avoid inflated sizing from unrealized PnL)
+        risk_usdt = self.balance * cfg.RISK_PCT
         sl_dist   = cfg.SL_ATR_MULT * atr
         qty       = risk_usdt / (sl_dist + 1e-9)
         # Cap by leverage
-        max_qty   = (self.equity * cfg.LEVERAGE) / (price + 1e-9)
+        max_qty   = (self.balance * cfg.LEVERAGE) / (price + 1e-9)
         qty       = min(qty, max_qty)
         qty       = round(qty, 6)
 
@@ -189,8 +189,8 @@ class PaperEngine:
         self.balance -= fee
 
         logger.info(
-            "OPEN %s %s @ %.4f | qty=%.6f | SL=%.4f | TP=%.4f | score=%d | fee=%.4f",
-            direction, symbol, price, qty, sl, tp, score, fee,
+            "OPEN %s %s @ %.4f | qty=%.6f | SL=%.4f | TP=%.4f | score=%d | fee=%.4f | balance=%.4f",
+            direction, symbol, price, qty, sl, tp, score, fee, self.balance,
         )
         self._log_signal(symbol, direction, price, score, signals)
         return True
@@ -235,7 +235,7 @@ class PaperEngine:
             "exit":        round(exit_price, 6),
             "qty":         round(pos.qty, 6),
             "pnl":         round(net, 4),
-            "pnl_pct":     round(net / cfg.INITIAL_BALANCE * 100, 3),
+            "pnl_pct":     round(net / (pos.entry_price * pos.qty + 1e-9) * 100, 3),
             "reason":      reason,
             "duration":    duration,
             "rr":          round(rr, 2),
@@ -249,7 +249,8 @@ class PaperEngine:
         emoji = "✅" if net > 0 else "❌"
         logger.info(
             "%s CLOSE %s %s @ %.4f | PnL=%.4f USDT (%.2f%%) | reason=%s | balance=%.2f",
-            emoji, pos.side, symbol, exit_price, net, net / cfg.INITIAL_BALANCE * 100,
+            emoji, pos.side, symbol, exit_price, net,
+            net / (pos.entry_price * pos.qty + 1e-9) * 100,
             reason, self.balance,
         )
 
@@ -271,7 +272,7 @@ class PaperEngine:
             "total_trades":  len(self.trades),
             "win_rate":      round(len(wins) / len(self.trades) * 100, 1),
             "total_pnl":     round(sum(t["pnl"] for t in self.trades), 4),
-            "total_pnl_pct": round(sum(t["pnl"] for t in self.trades) / cfg.INITIAL_BALANCE * 100, 2),
+            "total_pnl_pct": round(sum(t["pnl"] for t in self.trades) / (self.balance + 1e-9) * 100, 2),
             "avg_rr":        round(sum(t["rr"] for t in self.trades) / len(self.trades), 2),
             "profit_factor": round(gross_profit / (gross_loss + 1e-9), 2),
             "max_drawdown":  round(self.drawdown_pct * 100, 2),

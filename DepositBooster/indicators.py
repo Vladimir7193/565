@@ -148,12 +148,12 @@ def detect_order_block(df: pd.DataFrame) -> dict | None:
         # Bullish OB: bearish candle → strong bullish impulse
         if closes[i] < opens[i]:
             move = (closes[min(i + 2, len(closes) - 1)] - closes[i]) / (closes[i] + 1e-9)
-            if move > 0.005 and lows[i] <= price <= highs[i] * 1.012:
+            if move > 0.008 and lows[i] <= price <= highs[i] * 1.005:
                 return {"direction": "BULLISH", "ob_high": highs[i], "ob_low": lows[i]}
         # Bearish OB: bullish candle → strong bearish impulse
         if closes[i] > opens[i]:
             move = (closes[i] - closes[min(i + 2, len(closes) - 1)]) / (closes[i] + 1e-9)
-            if move > 0.005 and lows[i] * 0.988 <= price <= highs[i]:
+            if move > 0.008 and lows[i] * 0.995 <= price <= highs[i]:
                 return {"direction": "BEARISH", "ob_high": highs[i], "ob_low": lows[i]}
     return None
 
@@ -179,13 +179,13 @@ def detect_fvg(df: pd.DataFrame) -> dict | None:
         # Bullish FVG: gap between candle1 high and candle3 low
         if l3 > h1:
             gap = l3 - h1
-            if gap > max(0.001 * price, 0.3 * atr) and vol2 > avg_vol * 1.1:
+            if gap > max(0.002 * price, 0.4 * atr) and vol2 > avg_vol * 1.1:
                 if h1 <= price <= l3 * 1.005:
                     return {"direction": "BULLISH", "gap_top": l3, "gap_bottom": h1}
         # Bearish FVG: gap between candle1 low and candle3 high
         if h3 < l1:
             gap = l1 - h3
-            if gap > max(0.001 * price, 0.3 * atr) and vol2 > avg_vol * 1.1:
+            if gap > max(0.002 * price, 0.4 * atr) and vol2 > avg_vol * 1.1:
                 if h3 * 0.995 <= price <= l1:
                     return {"direction": "BEARISH", "gap_top": l1, "gap_bottom": h3}
     return None
@@ -214,7 +214,7 @@ def detect_liquidity_sweep(df: pd.DataFrame) -> dict | None:
     if cur_low < prev_low and cur_close > prev_low:
         depth = (prev_low - cur_low) / (prev_low + 1e-9)
         ret   = (cur_close - cur_low) / (cur_low + 1e-9)
-        if depth > 0.001 and ret > 0.003 and vols[-1] > avg_vol * 1.2:
+        if depth > 0.002 and ret > 0.005 and vols[-1] > avg_vol * 1.2:
             return {"direction": "BULLISH", "sweep_level": prev_low,
                     "strength": round(depth * 100 + ret * 100, 2)}
 
@@ -222,7 +222,7 @@ def detect_liquidity_sweep(df: pd.DataFrame) -> dict | None:
     if cur_high > prev_high and cur_close < prev_high:
         height = (cur_high - prev_high) / (prev_high + 1e-9)
         ret    = (cur_high - cur_close) / (cur_high + 1e-9)
-        if height > 0.001 and ret > 0.003 and vols[-1] > avg_vol * 1.2:
+        if height > 0.002 and ret > 0.005 and vols[-1] > avg_vol * 1.2:
             return {"direction": "BEARISH", "sweep_level": prev_high,
                     "strength": round(height * 100 + ret * 100, 2)}
     return None
@@ -280,6 +280,10 @@ def score_signal(df5: pd.DataFrame, df15: pd.DataFrame, df1h: pd.DataFrame,
 
     # ── 2. LIQUIDITY SWEEP — stop hunt before real move (1 pt) ───────────────
     sweep = detect_liquidity_sweep(df5)
+    if sweep:
+        # Filter contradicting signals: if breakout and sweep disagree, discard sweep
+        if bo is not None and bo["direction"] != sweep["direction"]:
+            sweep = None
     if sweep:
         if sweep["direction"] == "BULLISH":
             long_score  += 1
