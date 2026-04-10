@@ -918,13 +918,15 @@ def _cycle(guard: RiskGuard, tracker: TradeTracker, cycle_num: int):
                 logger.warning("Skipping %s — cannot calc valid qty for $%.2f", symbol, available)
                 continue
 
-            # SL / TP
+            # SL / TP — use mark price for accurate level calculation
+            ticker = get_ticker(symbol)
+            actual_price = ticker.get("mark_price") or price
             if sig["direction"] == "LONG":
-                sl = price - LIVE_SL_ATR * atr
-                tp = price + LIVE_TP_ATR * atr
+                sl = actual_price - LIVE_SL_ATR * atr
+                tp = actual_price + LIVE_TP_ATR * atr
             else:
-                sl = price + LIVE_SL_ATR * atr
-                tp = price - LIVE_TP_ATR * atr
+                sl = actual_price + LIVE_SL_ATR * atr
+                tp = actual_price - LIVE_TP_ATR * atr
 
             # Validate SL/TP sanity
             if sl <= 0 or tp <= 0:

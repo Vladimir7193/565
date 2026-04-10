@@ -37,12 +37,12 @@ MAX_DRAWDOWN     = 0.20        # halt if drawdown from peak > 20%
 SL_ATR_MULT          = 1.5    # wider SL to avoid noise wipeouts
 TP_ATR_MULT          = 4.5    # R:R = 3.0
 TRAIL_ACTIVATE_ATR   = 2.0    # activate trailing after 2×ATR profit
-TRAIL_STEP_ATR       = 1.0    # trailing step
+TRAIL_STEP_ATR       = 1.2    # trailing step (wider than original SL to avoid premature exits)
 
 # ── Signal thresholds ─────────────────────────────────────────────────────────
 MIN_CONFLUENCE       = 4       # need 4 signals minimum
 REQUIRE_BREAKOUT     = True   # must have BREAKOUT or SWEEP — no EMA-only entries
-BREAKOUT_ATR_MULT    = 1.2    # stronger breakout filter
+BREAKOUT_ATR_MULT    = 0.8    # breakout must exceed swing level by at least 0.8×ATR
 BREAKOUT_VOL_Z       = 1.5    # volume Z-score min for breakout confirmation
 SWING_LOOKBACK       = 20     # bars for swing high/low detection
 
